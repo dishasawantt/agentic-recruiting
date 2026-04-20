@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import OpenAI from "openai";
+import { createGroqOpenAIClient } from "@/lib/ai-clients";
 import {
   generateInterviewQuestions,
   mockInterviewQuestions,
@@ -9,8 +9,6 @@ import { readWorkerEnv } from "@/lib/worker-env";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
-
-const GROQ_BASE = "https://api.groq.com/openai/v1";
 
 export async function POST(req: NextRequest) {
   try {
@@ -45,12 +43,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(mockInterviewQuestions());
     }
 
-    const groq = new OpenAI({
-      apiKey: groqKey,
-      baseURL: GROQ_BASE,
-      timeout: 55_000,
-      maxRetries: 0,
-    });
+    const groq = createGroqOpenAIClient(groqKey);
     const chatModel =
       readWorkerEnv("GROQ_INTERVIEW_MODEL") || "llama-3.1-8b-instant";
 

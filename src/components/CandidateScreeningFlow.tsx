@@ -199,7 +199,11 @@ export function CandidateScreeningFlow({
         signal: ac.signal,
       });
       const raw = await res.text();
-      let data: { error?: string } & Partial<ScreenResult>;
+      let data: {
+        error?: string;
+        providerStatus?: number;
+        providerCode?: string;
+      } & Partial<ScreenResult>;
       try {
         data = raw ? (JSON.parse(raw) as typeof data) : {};
       } catch {
@@ -210,7 +214,12 @@ export function CandidateScreeningFlow({
         );
       }
       if (!res.ok) {
-        throw new Error(data.error || `Request failed (${res.status})`);
+        let msg = data.error || `Request failed (${res.status})`;
+        if (data.providerStatus != null) {
+          msg += ` · upstream HTTP ${data.providerStatus}`;
+        }
+        if (data.providerCode) msg += ` (${data.providerCode})`;
+        throw new Error(msg);
       }
       if (typeof data.matchScore !== "number") {
         throw new Error("Unexpected response from server (missing scores).");

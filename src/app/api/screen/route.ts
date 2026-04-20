@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import OpenAI from "openai";
+import { APIError } from "openai";
+import {
+  createGroqOpenAIClient,
+  createOpenAIEmbeddingClient,
+} from "@/lib/ai-clients";
 import { extractTextFromBuffer } from "@/lib/text-extract";
 import { withSourceMeta } from "@/lib/screen-source";
 import { mockScreenResult, runScreening } from "@/lib/screening";
@@ -7,8 +11,6 @@ import { readWorkerEnv } from "@/lib/worker-env";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
-
-const GROQ_BASE = "https://api.groq.com/openai/v1";
 
 async function parseFormData(form: FormData): Promise<{
   resumeText: string;
@@ -84,13 +86,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const groq = new OpenAI({
-      apiKey: groqKey,
-      baseURL: GROQ_BASE,
-    });
+    const groq = createGroqOpenAIClient(groqKey);
     const openaiKey = readWorkerEnv("OPENAI_API_KEY");
     const embeddingOpenAI = openaiKey
-      ? new OpenAI({ apiKey: openaiKey })
+      ? createOpenAIEmbeddingClient(openaiKey)
       : null;
     const chatModel =
       readWorkerEnv("GROQ_MODEL") || "llama-3.3-70b-versatile";
@@ -106,6 +105,16 @@ export async function POST(req: NextRequest) {
       withSourceMeta(result, resumeText, hadFileUpload)
     );
   } catch (e) {
+    if (e instanceof APIError) {
+      return NextResponse.json(
+        {
+          error: e.message,
+          providerStatus: e.status,
+          providerCode: e.code,
+        },
+        { status: 500 }
+      );
+    }
     const message = e instanceof Error ? e.message : "Screening failed";
     return NextResponse.json({ error: message }, { status: 500 });
   }

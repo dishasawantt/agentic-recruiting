@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
 import type { ScreenResult } from "./types";
 import { cosineSimilarity, similarityToScore } from "./similarity";
 
@@ -109,15 +110,10 @@ export async function runScreening(params: {
   "issuesCount": number
 }`;
 
-  const completion = await groq.chat.completions.create({
-    model: chatModel,
-    temperature: 0.2,
-    max_tokens: 4096,
-    response_format: { type: "json_object" },
-    messages: [
-      {
-        role: "system",
-        content: `You are an expert recruiting analyst. Compare the resume to the job description using meaning and transferable skills, not keyword stuffing.
+  const messages: ChatCompletionMessageParam[] = [
+    {
+      role: "system",
+      content: `You are an expert recruiting analyst. Compare the resume to the job description using meaning and transferable skills, not keyword stuffing.
 
 ${useOpenAiJsonShape ? jsonShapeOpenAI : jsonShapeGroqOnly}
 
@@ -128,13 +124,30 @@ Rules:
 - whyShortlisted: 3-6 bullets explaining why this profile merits human review (LLM reasoning for recruiters).
 - issuesCount: approximate count of gaps, risks, or ambiguities (like ATS issue counts).
 - Extract only what is supported by the resume text; do not invent employers or degrees.`,
-      },
-      {
-        role: "user",
-        content: `JOB DESCRIPTION:\n${jobChunk}\n\nRESUME:\n${resumeChunk}\n\n${similarityContext}`,
-      },
-    ],
-  });
+    },
+    {
+      role: "user",
+      content: `JOB DESCRIPTION:\n${jobChunk}\n\nRESUME:\n${resumeChunk}\n\n${similarityContext}`,
+    },
+  ];
+
+  let completion;
+  try {
+    completion = await groq.chat.completions.create({
+      model: chatModel,
+      temperature: 0.2,
+      max_tokens: 4096,
+      response_format: { type: "json_object" },
+      messages,
+    });
+  } catch {
+    completion = await groq.chat.completions.create({
+      model: chatModel,
+      temperature: 0.2,
+      max_tokens: 4096,
+      messages,
+    });
+  }
 
   const raw = completion.choices[0]?.message?.content;
   if (!raw) throw new Error("Empty model response");

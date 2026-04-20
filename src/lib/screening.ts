@@ -49,26 +49,30 @@ export async function runScreening(params: {
   const resumeChunk = resumeText.slice(0, 24000);
   const jobChunk = jobDescription.slice(0, 12000);
 
-  let embeddingSimilarity: number;
-  let embeddingMethod: ScreenResult["embeddingMethod"];
-  let similarityContext: string;
+  let embeddingSimilarity = 0;
+  let embeddingMethod: ScreenResult["embeddingMethod"] = "llm_estimate";
+  let similarityContext = `No embedding API configured. You MUST output "semanticDocumentSimilarity" (integer 0–100): a calibrated estimate of document-level semantic overlap between resume and job (synonyms, paraphrases, transferable skills should lift the score; do not mirror keyword overlap alone).`;
 
   if (embeddingOpenAI) {
-    const [resumeEmb, jobEmb] = await Promise.all([
-      embed(embeddingOpenAI, resumeChunk),
-      embed(embeddingOpenAI, jobChunk),
-    ]);
-    const cosine = cosineSimilarity(resumeEmb, jobEmb);
-    embeddingSimilarity = similarityToScore(cosine);
-    embeddingMethod = "openai";
-    similarityContext = `True embedding cosine similarity of full resume vs job text ≈ ${cosine.toFixed(
-      4
-    )} (on a 0–1 scale). Align categoryScores with this signal where appropriate.`;
-  } else {
-    embeddingMethod = "llm_estimate";
-    embeddingSimilarity = 0;
-    similarityContext = `No embedding API configured. You MUST output "semanticDocumentSimilarity" (integer 0–100): a calibrated estimate of document-level semantic overlap between resume and job (synonyms, paraphrases, transferable skills should lift the score; do not mirror keyword overlap alone).`;
+    try {
+      const [resumeEmb, jobEmb] = await Promise.all([
+        embed(embeddingOpenAI, resumeChunk),
+        embed(embeddingOpenAI, jobChunk),
+      ]);
+      const cosine = cosineSimilarity(resumeEmb, jobEmb);
+      embeddingSimilarity = similarityToScore(cosine);
+      embeddingMethod = "openai";
+      similarityContext = `True embedding cosine similarity of full resume vs job text ≈ ${cosine.toFixed(
+        4
+      )} (on a 0–1 scale). Align categoryScores with this signal where appropriate.`;
+    } catch {
+      embeddingMethod = "llm_estimate";
+      embeddingSimilarity = 0;
+      similarityContext = `Embedding API failed or key is invalid; treat embeddings as unavailable. You MUST output "semanticDocumentSimilarity" (integer 0–100): a calibrated estimate of document-level semantic overlap between resume and job (synonyms, paraphrases, transferable skills should lift the score; do not mirror keyword overlap alone).`;
+    }
   }
+
+  const useOpenAiJsonShape = embeddingMethod === "openai";
 
   const jsonShapeOpenAI = `Return a single JSON object with this exact shape:
 {
@@ -108,14 +112,14 @@ export async function runScreening(params: {
   const completion = await groq.chat.completions.create({
     model: chatModel,
     temperature: 0.2,
-    max_tokens: 8192,
+    max_tokens: 4096,
     response_format: { type: "json_object" },
     messages: [
       {
         role: "system",
         content: `You are an expert recruiting analyst. Compare the resume to the job description using meaning and transferable skills, not keyword stuffing.
 
-${embeddingOpenAI ? jsonShapeOpenAI : jsonShapeGroqOnly}
+${useOpenAiJsonShape ? jsonShapeOpenAI : jsonShapeGroqOnly}
 
 Rules:
 - All scores are integers 0-100.
@@ -136,13 +140,23 @@ Rules:
   if (!raw) throw new Error("Empty model response");
   const parsed = parseJsonFromContent(raw) as Record<string, unknown>;
 
-  if (!embeddingOpenAI) {
+  if (!useOpenAiJsonShape) {
     embeddingSimilarity = clampScore(
       Number(parsed.semanticDocumentSimilarity)
     );
   }
 
-  const categoryScores = parsed.categoryScores as ScreenResult["categoryScores"];
+  const rawCs = parsed.categoryScores;
+  if (!rawCs || typeof rawCs !== "object") {
+    throw new Error("Model response missing categoryScores.");
+  }
+  const cs = rawCs as Record<string, unknown>;
+  const categoryScores: ScreenResult["categoryScores"] = {
+    skillAlignment: clampScore(Number(cs.skillAlignment)),
+    experienceRelevance: clampScore(Number(cs.experienceRelevance)),
+    impactEvidence: clampScore(Number(cs.impactEvidence)),
+    semanticFit: clampScore(Number(cs.semanticFit)),
+  };
   const llmAvg = avg([
     categoryScores.skillAlignment,
     categoryScores.experienceRelevance,
@@ -157,18 +171,7 @@ Rules:
     embeddingSimilarity,
     embeddingMethod,
     issuesCount: Number(parsed.issuesCount) || 0,
-    categoryScores: {
-      skillAlignment: Math.min(100, Math.max(0, categoryScores.skillAlignment)),
-      experienceRelevance: Math.min(
-        100,
-        Math.max(0, categoryScores.experienceRelevance)
-      ),
-      impactEvidence: Math.min(
-        100,
-        Math.max(0, categoryScores.impactEvidence)
-      ),
-      semanticFit: Math.min(100, Math.max(0, categoryScores.semanticFit)),
-    },
+    categoryScores,
     skills: (parsed.skills as string[]) ?? [],
     education: (parsed.education as ScreenResult["education"]) ?? [],
     employment: (parsed.employment as ScreenResult["employment"]) ?? [],

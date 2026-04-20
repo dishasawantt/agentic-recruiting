@@ -1,0 +1,17 @@
+node_modules
+.next
+.open-next
+.wrangler
+out
+.env
+.env.local
+*.log
+.DS_Store
+tsconfig.tsbuildinfo
+/Asking.gif
+/Asking.mp4
+/Listening.gif
+/Listening.mp4
+/img1.png
+/img2.webp
+/369d910c-1d74-4beb-85ee-2bfa00868195.png

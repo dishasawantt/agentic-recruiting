@@ -6,7 +6,7 @@ import { mockScreenResult, runScreening } from "@/lib/screening";
 import { readWorkerEnv } from "@/lib/worker-env";
 
 export const runtime = "nodejs";
-export const maxDuration = 120;
+export const maxDuration = 60;
 
 const GROQ_BASE = "https://api.groq.com/openai/v1";
 

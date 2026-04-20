@@ -186,18 +186,46 @@ export function CandidateScreeningFlow({
     setError(null);
     setHighlightSkill(null);
     setLoading(true);
+    const ac = new AbortController();
+    const t = window.setTimeout(() => ac.abort(), 90_000);
     try {
       const fd = new FormData();
       fd.append("jobDescription", initialJobDescription);
       if (file) fd.append("file", file, file.name);
       else fd.append("resumeText", resumeText);
-      const res = await fetch("/api/screen", { method: "POST", body: fd });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Request failed");
+      const res = await fetch("/api/screen", {
+        method: "POST",
+        body: fd,
+        signal: ac.signal,
+      });
+      const raw = await res.text();
+      let data: { error?: string } & Partial<ScreenResult>;
+      try {
+        data = raw ? (JSON.parse(raw) as typeof data) : {};
+      } catch {
+        throw new Error(
+          raw.trimStart().startsWith("<")
+            ? `Server returned ${res.status} (HTML, not JSON). Open DevTools → Network → /api/screen for details.`
+            : (raw.slice(0, 200) || `Bad response (${res.status})`)
+        );
+      }
+      if (!res.ok) {
+        throw new Error(data.error || `Request failed (${res.status})`);
+      }
+      if (typeof data.matchScore !== "number") {
+        throw new Error("Unexpected response from server (missing scores).");
+      }
       setResult(data as ScreenResult);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Something went wrong");
+      if (e instanceof DOMException && e.name === "AbortError") {
+        setError(
+          "Timed out after 90s. On Cloudflare, PDF parsing can fail or run slowly — paste plain resume text and try again."
+        );
+      } else {
+        setError(e instanceof Error ? e.message : "Something went wrong");
+      }
     } finally {
+      window.clearTimeout(t);
       setLoading(false);
       setLoadStep(0);
     }

@@ -22,9 +22,15 @@ export async function extractTextFromBuffer(
     (mimeLower === "application/octet-stream" && isPdfBuffer(buffer));
 
   if (treatAsPdf) {
-    const pdfParse = (await import("pdf-parse")).default;
-    const data = await pdfParse(buffer);
-    return data.text?.trim() ?? "";
+    try {
+      const pdfParse = (await import("pdf-parse")).default;
+      const data = await pdfParse(buffer);
+      return data.text?.trim() ?? "";
+    } catch {
+      throw new Error(
+        "Could not read this PDF (try DOCX/TXT or paste resume text). Some hosts cannot parse all PDFs."
+      );
+    }
   }
 
   const treatAsDocx =

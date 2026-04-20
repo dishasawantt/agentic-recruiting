@@ -7,7 +7,7 @@
     "dev:clean": "(lsof -ti:3000 | xargs kill -9) 2>/dev/null; (lsof -ti:3001 | xargs kill -9) 2>/dev/null; WATCHPACK_POLLING=true next dev",
     "build": "next build",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
-    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy -- --keep-vars",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
     "start": "next start",
     "lint": "next lint"

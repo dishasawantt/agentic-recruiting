@@ -3,6 +3,7 @@ import OpenAI from "openai";
 import { extractTextFromBuffer } from "@/lib/text-extract";
 import { withSourceMeta } from "@/lib/screen-source";
 import { mockScreenResult, runScreening } from "@/lib/screening";
+import { readWorkerEnv } from "@/lib/worker-env";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -75,7 +76,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: msg }, { status: 400 });
     }
 
-    const groqKey = process.env.GROQ_API_KEY;
+    const groqKey = readWorkerEnv("GROQ_API_KEY");
     if (!groqKey) {
       const result = mockScreenResult(resumeText, jobDescription);
       return NextResponse.json(
@@ -87,11 +88,12 @@ export async function POST(req: NextRequest) {
       apiKey: groqKey,
       baseURL: GROQ_BASE,
     });
-    const embeddingOpenAI = process.env.OPENAI_API_KEY
-      ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+    const openaiKey = readWorkerEnv("OPENAI_API_KEY");
+    const embeddingOpenAI = openaiKey
+      ? new OpenAI({ apiKey: openaiKey })
       : null;
     const chatModel =
-      process.env.GROQ_MODEL?.trim() || "llama-3.3-70b-versatile";
+      readWorkerEnv("GROQ_MODEL") || "llama-3.3-70b-versatile";
 
     const result = await runScreening({
       groq,

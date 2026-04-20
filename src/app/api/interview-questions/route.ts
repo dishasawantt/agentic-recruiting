@@ -5,6 +5,7 @@ import {
   mockInterviewQuestions,
 } from "@/lib/interview-questions";
 import type { ScreenResult } from "@/lib/types";
+import { readWorkerEnv } from "@/lib/worker-env";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -39,7 +40,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const groqKey = process.env.GROQ_API_KEY;
+    const groqKey = readWorkerEnv("GROQ_API_KEY");
     if (!groqKey) {
       return NextResponse.json(mockInterviewQuestions());
     }
@@ -51,8 +52,7 @@ export async function POST(req: NextRequest) {
       maxRetries: 0,
     });
     const chatModel =
-      process.env.GROQ_INTERVIEW_MODEL?.trim() ||
-      "llama-3.1-8b-instant";
+      readWorkerEnv("GROQ_INTERVIEW_MODEL") || "llama-3.1-8b-instant";
 
     const result = await generateInterviewQuestions(
       groq,

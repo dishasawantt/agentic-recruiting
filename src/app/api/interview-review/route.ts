@@ -5,6 +5,7 @@ import {
   reviewInterviewCall,
 } from "@/lib/interview-call-review";
 import { parseVoiceQAExport } from "@/lib/voice-qa-export-types";
+import { readWorkerEnv } from "@/lib/worker-env";
 
 export const runtime = "nodejs";
 export const maxDuration = 120;
@@ -47,7 +48,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const groqKey = process.env.GROQ_API_KEY;
+    const groqKey = readWorkerEnv("GROQ_API_KEY");
     if (!groqKey) {
       return NextResponse.json(mockInterviewCallReview(data));
     }
@@ -59,8 +60,8 @@ export async function POST(req: NextRequest) {
       maxRetries: 0,
     });
     const chatModel =
-      process.env.GROQ_REVIEW_MODEL?.trim() ||
-      process.env.GROQ_INTERVIEW_MODEL?.trim() ||
+      readWorkerEnv("GROQ_REVIEW_MODEL") ||
+      readWorkerEnv("GROQ_INTERVIEW_MODEL") ||
       "llama-3.1-8b-instant";
 
     const result = await reviewInterviewCall(groq, chatModel, data);

@@ -32,7 +32,7 @@ import {
 } from "@/lib/screening-insights";
 import type { ScreenResult } from "@/lib/types";
 
-const DEMO_BANNER_KEY = "agentic_dismiss_demo_banner";
+const DEMO_BANNER_KEY = "agentic_recruiting_dismiss_demo_banner_v1";
 
 const ACCEPT =
   ".pdf,.doc,.docx,.txt,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/msword,text/plain,application/octet-stream";

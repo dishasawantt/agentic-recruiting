@@ -1,9 +1,9 @@
 import { SCREENING_SESSION_KEY } from "./screening-session";
 import type { ScreenResult } from "./types";
 
-export const CANDIDATE_SESSION_KEY = "agentic_candidate_flow_v2";
-export const LAST_APPLY_PATH_KEY = "agentic_last_apply_path";
-export const PENDING_INTERVIEW_REVIEW_KEY = "agentic_pending_interview_review_v1";
+export const CANDIDATE_SESSION_KEY = "agentic_recruiting_candidate_flow_v2";
+export const LAST_APPLY_PATH_KEY = "agentic_recruiting_last_apply_path_v1";
+export const PENDING_INTERVIEW_REVIEW_KEY = "agentic_recruiting_pending_interview_review_v1";
 
 export type CandidateSessionPayload = {
   jobId: string;

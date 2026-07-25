@@ -30,6 +30,15 @@ It runs as a **Next.js App Router** app with API routes deployed to **Cloudflare
 
 > **Try it live:** [agentic-recruiting.dishasawantt.workers.dev](https://agentic-recruiting.dishasawantt.workers.dev) — pick a role, paste a résumé, and walk the full JOBS → APPLY → INTERVIEW → RESULTS flow.
 
+## 📸 Screenshots
+
+| | |
+|:--:|:--:|
+| ![Apply and benchmark candidates](.github/assets/gallery/apply.png) | ![AI screening result](.github/assets/gallery/screening.png) |
+| **Apply — résumé upload with benchmark candidates** | **AI screening → _Hire_ recommendation + probes** |
+| ![Live simulated interview](.github/assets/gallery/interview.png) | ![Interview scorecard](.github/assets/gallery/review.png) |
+| **Live simulated voice interview (Q1/5)** | **Interview scorecard review** |
+
 ## ✨ Features
 
 - 📄 **AI résumé screening** — PDF/DOCX extraction, Groq LLM scoring against the job description, with optional OpenAI embedding similarity.
